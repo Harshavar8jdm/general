@@ -21,8 +21,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -51,19 +49,6 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint16_t ir_1 = 0; //PC0 IR1 value
-uint16_t ir_2 = 0; //PC1 IR2 value
-uint16_t ir_3 = 0; //PC0 IR1 value
-uint16_t ir_4 = 0; //PC1 IR2 value
-uint16_t ir_5 = 0; //PC0 IR1 value
-uint8_t isObjectDetected = 0;
-int ir_threshhold = 3800;
-int ir_stop_threshold = 1400;
-uint8_t base_speed = 255/3;
-uint8_t turn_speed = 255/2;
-
-uint16_t rawValues[5];
-char msg[60];
 
 /* USER CODE END PV */
 
@@ -76,6 +61,43 @@ static void MX_TIM3_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
+void move_forward(uint32_t speed_a = htim2.Init.Period / 2, uint32_t speed_b = htim2.Init.Period / 2 ,uint32_t delay = 5000){
+
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, speed_a);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, 0);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, speed_b);
+	HAL_Delay(delay);
+
+}
+
+void move_reverse(uint32_t speed_a = htim2.Init.Period / 2, uint32_t speed_b = htim2.Init.Period / 2 ,uint32_t delay = 5000){
+	 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
+	 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, speed_a);
+	 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
+	 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, speed_b);
+	 HAL_Delay(5000);
+}
+
+void move_circle(uint32_t speed_a = htim2.Init.Period / 1.5, uint32_t speed_b = htim2.Init.Period / 2 ,uint32_t delay = 5000){
+
+	 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
+	 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, speed_a);
+     __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, 0);
+	 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, speed_b);
+	 HAL_Delay(10000);
+
+}
+
+void spin_xwise(uint32_t speed_a = htim2.Init.Period / 2, uint32_t speed_b = htim2.Init.Period / 2 ,uint32_t delay = 5000){
+
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, speed_a);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, speed_b);
+	HAL_Delay(5000);
+
+}
 
 /* USER CODE END PFP */
 
@@ -92,6 +114,11 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
+	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
+	HAL_Delay(1000);
 
   /* USER CODE END 1 */
 
@@ -119,8 +146,6 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t *) rawValues, 5);
-
 
 
   /* USER CODE END 2 */
@@ -130,61 +155,16 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  //Forward
+	  move_forward();
+	  //Reverse
+	  move_reverse();
+	  //Circular Motion
+	  move_circle();
+	  //Spinning Motion
+	  spin_xwise();
 
     /* USER CODE BEGIN 3 */
-
-	  ir_1 = (uint16_t) rawValues[0];
-	  ir_2 = (uint16_t) rawValues[1];
-	  ir_3 = (uint16_t) rawValues[2];
-	  ir_4 = (uint16_t) rawValues[3];
-	  ir_5 = (uint16_t) rawValues[4];
-
-		 HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-		 HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-		 HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
-		 HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
-
-	  sprintf(msg, "IR1:%hu IR2:%hu IR3:%hu IR4:%hu IR5:%hu\r\n",
-	              ir_1, ir_2, ir_3, ir_4, ir_5);
-	  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-
-	  if(ir_3 >=  ir_threshhold)
-	  {
-
-		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, base_speed);
-		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, 0);
-		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, base_speed);
-	  }
-	  else{
-
-		  if(ir_4 >=  ir_threshhold && ir_5 >=  ir_threshhold){
-			  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-			  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
-			  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, 0);
-			  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, turn_speed);
-		  }
-
-		  else if(ir_2 >=  ir_threshhold && ir_1 >=  ir_threshhold){
-			  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-		      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, turn_speed);
-		  	  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, 0);
-		  	  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
-		  		  }
-		  else if(ir_1 <=  ir_stop_threshold && ir_2 <=  ir_stop_threshold &&
-				  ir_3 <=  ir_stop_threshold && ir_4 <=  ir_stop_threshold &&
-				  ir_5 <=  ir_stop_threshold ){
-			  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-			  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
-			  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, 0);
-			  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
-
-		  }
-
-	  }
-
-
-
   }
   /* USER CODE END 3 */
 }
